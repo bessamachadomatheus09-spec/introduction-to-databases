@@ -59,48 +59,45 @@ Não altere nem apague os arquivos do `Module-1`.
 
 **Nome completo:**
 
-> Escreva aqui.
+> Matheus Bessa
 
 **Branch:**
 
 ```text
-team-XX
-```
+team-04```
 
 **Nome do banco:**
 
 ```text
 
-```
+```Mercado
 
 **Tema do projeto:**
 
 > Escreva aqui.
 
----
+--- Banco de dados de um mercado 
 
 # 3. Retomada do banco
 
 Liste as principais tabelas que serão utilizadas.
 
-| Nº | Tabela | PK | Principais FKs |
-|---:|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+Nº  |	Tabela | PK | Principais FKs
+1 |cliente |	id_cliente | Não possui
+2 |	funcionario |	id_funcionario | Não possui
+3 |	produto  |	id_produto | Não possui
+4 |	venda |	id_venda | id_cliente, id_funcionario
+5 |	item_venda |	id_item_venda | id_venda, id_produto
 
 ---
 
 # 4. Relacionamentos existentes
 
-| Tabela A | Cardinalidade | Tabela B | FK utilizada |
-|---|---|---|---|
-|  |  |  |  |
-|  |  |  |  |
-|  |  |  |  |
-|  |  |  |  |
+Tabela A | Cardinalidade | Tabela B | FK utilizada
+cliente | 1:N |	venda |	venda.id_cliente
+funcionario | 1:N |	venda | venda.id_funcionario
+venda |	1:N | item_venda | item_venda.id_venda
+produto | 1:N |	item_venda | item_venda.id_produto
 
 ---
 
@@ -124,44 +121,68 @@ INNER JOIN tabela_b AS b
 **Pergunta em linguagem natural:**
 
 > Escreva aqui.
+>Quais vendas foram realizadas, quais clientes compraram e quais funcionários atenderam?
 
 **Tabelas utilizadas:**
 
 ```text
 
-```
+```venda, cliente e funcionario.
 
 **PK/FK utilizadas:**
 
 ```text
 
-```
+```venda.id_venda, venda.id_cliente e venda.id_funcionario.
 
 **SQL:**
 
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    f.nome AS funcionario,
+    v.data_venda,
+    v.status
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN funcionario AS f
+    ON f.id_funcionario = v.id_funcionario
+ORDER BY v.id_venda;
 
 **Explique o resultado:**
 
 > Escreva aqui.
+A consulta mostra as vendas junto com o nome dos clientes e dos funcionários responsáveis. O INNER JOIN retorna apenas os registros que possuem correspondência entre as tabelas relacionadas.
 
 ## Consulta INNER JOIN 2
 
-**Pergunta:**
+**Pergunta:** 
 
 > Escreva aqui.
-
+Quais produtos aparecem em cada venda e qual é a quantidade comprada?
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    v.id_venda,
+    p.nome AS produto,
+    iv.quantidade,
+    iv.preco_unitario,
+    ROUND(iv.quantidade * iv.preco_unitario, 2) AS subtotal
+FROM item_venda AS iv
+INNER JOIN venda AS v
+    ON v.id_venda = iv.id_venda
+INNER JOIN produto AS p
+    ON p.id_produto = iv.id_produto
+ORDER BY v.id_venda, p.nome;
 
 **Explique:**
 
 > Escreva aqui.
 
----
+---A consulta relaciona os itens às vendas e aos produtos. Assim, é possível ver o nome do produto, a quantidade comprada, o preço unitário e o subtotal de cada item.
 
 # 6. LEFT JOIN
 
@@ -172,16 +193,24 @@ O `LEFT JOIN` mantém todos os registros da tabela à esquerda, mesmo quando nã
 **Pergunta:**
 
 > Escreva aqui.
-
+Quantas vendas cada cliente possui, incluindo aqueles que ainda não realizaram nenhuma compra?
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    c.id_cliente,
+    c.nome AS cliente,
+    COUNT(v.id_venda) AS quantidade_vendas
+FROM cliente AS c
+LEFT JOIN venda AS v
+    ON v.id_cliente = c.id_cliente
+GROUP BY c.id_cliente, c.nome
+ORDER BY quantidade_vendas DESC, c.nome;
 
 **O que o LEFT JOIN permite visualizar neste caso?**
 
 > Escreva aqui.
 
----
+---Ele permite mostrar todos os clientes, mesmo aqueles que não possuem vendas. Para esses clientes, a quantidade de vendas será zero.
 
 # 7. RIGHT JOIN
 
@@ -195,13 +224,22 @@ O `RIGHT JOIN` mantém todos os registros da tabela da direita, mesmo quando nã
 
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    p.id_produto,
+    p.nome AS produto,
+    iv.id_item_venda,
+    iv.id_venda,
+    iv.quantidade
+FROM item_venda AS iv
+RIGHT JOIN produto AS p
+    ON p.id_produto = iv.id_produto
+ORDER BY p.nome;
 
 **Explique o resultado:**
 
 > Escreva aqui.
 
----
+---O RIGHT JOIN mantém todos os produtos cadastrados, mesmo quando não possuem itens de venda relacionados. Nesse caso, os campos da tabela item_venda aparecem como NULL.
 
 # 8. JOIN com três ou mais tabelas
 
@@ -212,20 +250,47 @@ Crie duas consultas envolvendo pelo menos três tabelas.
 **Pergunta:**
 
 > Escreva aqui.
-
+``Quais clientes compraram quais produtos em cada venda?
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    p.nome AS produto,
+    iv.quantidade,
+    ROUND(iv.quantidade * iv.preco_unitario, 2) AS subtotal
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN item_venda AS iv
+    ON iv.id_venda = v.id_venda
+INNER JOIN produto AS p
+    ON p.id_produto = iv.id_produto
+ORDER BY v.id_venda, p.nome;
 
 ## Consulta 2
 
 **Pergunta:**
 
 > Escreva aqui.
-
+``Qual funcionário atendeu cada venda e qual foi o valor total dos itens vendidos?
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    v.id_venda,
+    f.nome AS funcionario,
+    c.nome AS cliente,
+    v.status,
+    ROUND(SUM(iv.quantidade * iv.preco_unitario), 2) AS total_venda
+FROM venda AS v
+INNER JOIN funcionario AS f
+    ON f.id_funcionario = v.id_funcionario
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN item_venda AS iv
+    ON iv.id_venda = v.id_venda
+GROUP BY v.id_venda, f.nome, c.nome, v.status
+ORDER BY v.id_venda;
 
 ---
 
@@ -234,26 +299,44 @@ Crie duas consultas envolvendo pelo menos três tabelas.
 **Pergunta:**
 
 > Escreva aqui.
-
+```Quais vendas foram finalizadas e quais clientes realizaram essas compras?
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    v.data_venda,
+    v.status
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+WHERE v.status = 'finalizada'
+ORDER BY v.data_venda;
 
 **Explique o filtro:**
 
 > Escreva aqui.
 
----
+---O WHERE filtra os resultados para mostrar somente as vendas com status finalizada. Dessa forma, as vendas abertas ou canceladas não aparecem.
 
 # 10. JOIN + ORDER BY
 
 **Pergunta:**
-
+```Quais produtos tiveram os maiores subtotais nos itens vendidos?
 > Escreva aqui.
 
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    p.nome AS produto,
+    iv.id_venda,
+    iv.quantidade,
+    iv.preco_unitario,
+    ROUND(iv.quantidade * iv.preco_unitario, 2) AS subtotal
+FROM item_venda AS iv
+INNER JOIN produto AS p
+    ON p.id_produto = iv.id_produto
+ORDER BY subtotal DESC;
 
 ---
 
@@ -262,12 +345,26 @@ Crie duas consultas envolvendo pelo menos três tabelas.
 Crie uma consulta que combine tabelas e utilize ao menos uma função de agregação.
 
 **Pergunta:**
-
+Qual foi o valor total de cada venda e quais foram os preços mínimo, máximo e médio dos itens?
 > Escreva aqui.
 
 ```sql
 -- Cole aqui.
-```
+```SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    COUNT(iv.id_item_venda) AS quantidade_de_itens,
+    ROUND(SUM(iv.quantidade * iv.preco_unitario), 2) AS total_venda,
+    AVG(iv.preco_unitario) AS preco_medio,
+    MIN(iv.preco_unitario) AS menor_preco,
+    MAX(iv.preco_unitario) AS maior_preco
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN item_venda AS iv
+    ON iv.id_venda = v.id_venda
+GROUP BY v.id_venda, c.nome
+ORDER BY total_venda DESC;
 
 **Explique o agrupamento:**
 
@@ -296,18 +393,27 @@ As consultas devem responder perguntas reais sobre o banco.
 # 13. Consulta mais útil
 
 **Pergunta:**
-
+```Quais clientes realizaram compras e quanto gastaram no total?
 > Escreva aqui.
 
 ```sql
--- Cole aqui.
-```
+SELECT
+    c.nome AS cliente,
+    COUNT(DISTINCT v.id_venda) AS quantidade_vendas,
+    ROUND(SUM(iv.quantidade * iv.preco_unitario), 2) AS total_gasto
+FROM cliente AS c
+INNER JOIN venda AS v
+    ON v.id_cliente = c.id_cliente
+INNER JOIN item_venda AS iv
+    ON iv.id_venda = v.id_venda
+GROUP BY c.id_cliente, c.nome
+ORDER BY total_gasto DESC;```
 
 **Por que ela é útil?**
 
 > Escreva aqui.
 
----
+---Essa consulta ajuda o mercado a identificar os clientes que mais gastaram e a quantidade de vendas de cada um. Essas informações podem ser usadas para analisar as vendas e planejar promoções.
 
 # 14. Validação prática obrigatória
 
@@ -327,7 +433,15 @@ Explique:
 
 > Escreva aqui.
 
----
+---1.Participam as tabelas venda, cliente e funcionario.
+
+2.São utilizadas as PKs id_cliente e id_funcionario para identificar os clientes e funcionários relacionados. A tabela venda também possui a PK id_venda.
+
+3.As FKs utilizadas são venda.id_cliente e venda.id_funcionario.
+
+4.A cláusula ON define a condição de relacionamento entre as tabelas, comparando as FKs da tabela venda com as PKs das tabelas correspondentes.
+
+5.A consulta poderia relacionar registros incorretos, gerar linhas duplicadas ou apresentar resultados diferentes do esperado.
 
 # 15. Teste no MySQL Workbench
 
@@ -337,24 +451,20 @@ Explique:
 -- Cole aqui.
 ```
 
-**Resultado esperado:**
+Resultado esperado:
 
-> Escreva aqui.
+Uma linha para cada venda, mostrando seu identificador, o nome do cliente, o funcionário responsável e o status.
 
-**Resultado obtido:**
+Resultado obtido:
 
-> Escreva aqui.
-
----
+Preencher após executar a consulta no MySQL Workbench e conferir o resultado apresentado.
 
 # 16. Problemas encontrados
 
-| Problema | Causa | Solução |
-|---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
-
+Problema	Causa	Solução
+Coluna ambígua | Duas tabelas podem possuir colunas com o mesmo nome | Informar o apelido da tabela antes da coluna
+Linhas duplicadas |	Uma venda pode possuir vários itens	| Utilizar GROUP BY e funções de agregação quando necessário
+Registros não aparecem | O INNER JOIN exige correspondência entre as tabelas  | Utilizar LEFT JOIN ou RIGHT JOIN quando for necessário manter todos os registros de um dos lados
 ---
 
 # 17. Uso de LLMs
