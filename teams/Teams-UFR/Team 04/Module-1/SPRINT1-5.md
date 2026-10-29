@@ -31,7 +31,7 @@ Nesta Sprint 1/5, o foco é exclusivamente o **planejamento do banco de dados**.
 
 ---
 
-# 1. Identificação do aluno
+# 1. Identificçaão do aluno
 
 **Nome completo:**
 
