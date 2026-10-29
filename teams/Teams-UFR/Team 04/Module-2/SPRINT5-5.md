@@ -1,459 +1,305 @@
-# SPRINT 5/5 — Triggers, Transações, Integração e Validação Final
+# SPRINT 5/5: Triggers, Transações, Integração e Validação Final
 
 **Disciplina:** Laboratório de Banco de Dados  
 **Módulo:** 2  
-**Modalidade:** Atividade individual  
-**Entrega desta Sprint:** `SPRINT5-5.md` + `SPRINT5-5.sql`
+**Aluno:** Matheus Bessa Machado  
+**Banco utilizado:** `db_mercado`  
+**SGBD:** MySQL
 
 ---
 
-# Objetivo da Sprint 5/5
+## 1. Identificação
 
-Nesta Sprint final do `Module-2`, cada aluno deverá:
+O projeto utiliza o banco `db_mercado`, com tabelas de clientes, funcionários, produtos, vendas e itens vendidos.
 
-1. implementar ao menos um `TRIGGER`;
-2. trabalhar com transações;
-3. demonstrar `COMMIT`;
-4. demonstrar `ROLLBACK`;
-5. integrar os conteúdos do módulo;
-6. testar todo o código;
-7. preparar a entrega final via Pull Request.
-
-Serão trabalhados:
-
-```sql
-CREATE TRIGGER
-BEFORE INSERT
-AFTER INSERT
-BEFORE UPDATE
-AFTER UPDATE
-START TRANSACTION
-COMMIT
-ROLLBACK
-```
-
----
-
-# 1. Identificação
-
-**Nome completo:**
-
-> Escreva aqui.
-
-**Banco utilizado:**
-
-```text
-
-```
-
----
-
-# 2. Revisão do Module-2
+## 2. Revisão do Module-2
 
 | Sprint | Conteúdo | Concluído? |
 |---|---|---|
-| 1/5 | JOINs |  |
-| 2/5 | Subconsultas |  |
-| 3/5 | Views |  |
-| 4/5 | Procedures e Functions |  |
-| 5/5 | Triggers e Transações |  |
+| 1/5 | JOINs | [ ] |
+| 2/5 | Subconsultas | [ ] |
+| 3/5 | Views | [ ] |
+| 4/5 | Procedures e Functions | [ ] |
+| 5/5 | Triggers e Transações | [ ] |
 
----
+*Marcar cada etapa após conferir os arquivos e executar os testes.*
 
-# 3. Planejando um TRIGGER
+## 3. Planejamento do Trigger
 
-O Trigger deverá representar uma regra ou automação coerente com o domínio.
+**Regra escolhida:** impedir que o preço de um produto seja alterado para zero ou um valor negativo.
 
-Exemplos possíveis:
+**Evento:** `BEFORE UPDATE`
 
-```text
-registrar histórico após alteração
-atualizar estoque
-impedir valor inválido
-registrar auditoria
-atualizar status automaticamente
-registrar data de modificação
-```
+**Tabela envolvida:** `produto`
 
-**Regra escolhida:**
+A regra ajuda a manter os preços cadastrados válidos.
 
-> Escreva aqui.
-
-**Evento:**
-
-- [ ] BEFORE INSERT
-- [ ] AFTER INSERT
-- [ ] BEFORE UPDATE
-- [ ] AFTER UPDATE
-- [ ] Outro
-
-**Tabela envolvida:**
-
-```text
-
-```
-
----
-
-# 4. Implementação do TRIGGER
-
-Estrutura geral:
+## 4. Implementação do Trigger
 
 ```sql
 DELIMITER //
 
-CREATE TRIGGER nome_trigger
-BEFORE INSERT ON nome_tabela
+CREATE TRIGGER trg_validar_preco_produto
+BEFORE UPDATE ON produto
 FOR EACH ROW
 BEGIN
-    -- lógica
+    IF NEW.preco <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT =
+            'O preco do produto deve ser maior que zero.';
+    END IF;
 END //
 
 DELIMITER ;
 ```
 
-**SQL do seu Trigger:**
+### Explicação linha por linha
 
-```sql
--- Cole aqui.
-```
+- `DELIMITER //`: altera temporariamente o delimitador.
+- `CREATE TRIGGER`: cria o Trigger.
+- `BEFORE UPDATE ON produto`: executa a validação antes de atualizar um produto.
+- `FOR EACH ROW`: aplica a regra a cada linha alterada.
+- `IF NEW.preco <= 0`: verifica se o novo preço é inválido.
+- `SIGNAL SQLSTATE '45000'`: gera um erro quando a regra é violada.
+- `MESSAGE_TEXT`: apresenta a mensagem explicando o problema.
+- `END`: encerra o bloco e o Trigger.
 
-**Explique linha por linha:**
-
-> Escreva aqui.
-
----
-
-# 5. Testando o Trigger
+## 5. Testando o Trigger
 
 **Estado antes do teste:**
 
 ```sql
--- SELECT utilizado.
+SELECT id_produto, nome, preco
+FROM produto
+WHERE id_produto = 1;
 ```
 
 **Operação executada:**
 
 ```sql
--- INSERT ou UPDATE utilizado.
+UPDATE produto
+SET preco = 0
+WHERE id_produto = 1;
 ```
 
 **Estado depois do teste:**
 
 ```sql
--- SELECT utilizado.
+SELECT id_produto, nome, preco
+FROM produto
+WHERE id_produto = 1;
 ```
 
-**Resultado observado:**
+**Resultado esperado:** o MySQL apresenta uma mensagem de erro e impede a atualização para preço zero. O preço anterior deve permanecer inalterado.
 
-> Escreva aqui.
+## 6. START TRANSACTION
 
----
+O comando `START TRANSACTION` inicia uma transação. As alterações podem ser confirmadas com `COMMIT` ou desfeitas com `ROLLBACK`, desde que as tabelas utilizem um mecanismo transacional compatível.
 
-# 6. START TRANSACTION
+## 7. Teste com COMMIT
 
-Uma transação permite tratar um conjunto de operações como uma unidade.
-
-Estrutura:
+**Objetivo:** demonstrar como confirmar uma alteração no preço de um produto.
 
 ```sql
 START TRANSACTION;
 
--- operação 1
--- operação 2
+UPDATE produto
+SET preco = preco + 1.00
+WHERE id_produto = 1;
 
-COMMIT;
-```
-
----
-
-# 7. Teste com COMMIT
-
-Crie uma transação coerente com o domínio.
-
-**Objetivo:**
-
-> Escreva aqui.
-
-```sql
-START TRANSACTION;
-
--- operações
+SELECT id_produto, nome, preco
+FROM produto
+WHERE id_produto = 1;
 
 COMMIT;
 ```
 
 **O que aconteceu após o COMMIT?**
 
-> Escreva aqui.
+O aumento de preço foi confirmado e passou a fazer parte dos dados persistidos. Em seguida, o script restaura o valor anterior em outra transação para não deixar a alteração de teste no banco.
 
----
-
-# 8. Teste com ROLLBACK
-
-Execute uma transação que será desfeita.
-
-```sql
-START TRANSACTION;
-
--- operações
-
-ROLLBACK;
-```
+## 8. Teste com ROLLBACK
 
 **Verificação antes:**
 
 ```sql
--- SELECT
+SELECT id_produto, nome, preco
+FROM produto
+WHERE id_produto = 1;
+```
+
+**Operação executada:**
+
+```sql
+START TRANSACTION;
+
+UPDATE produto
+SET preco = preco + 100.00
+WHERE id_produto = 1;
+
+SELECT id_produto, nome, preco
+FROM produto
+WHERE id_produto = 1;
+
+ROLLBACK;
 ```
 
 **Verificação depois:**
 
 ```sql
--- SELECT
+SELECT id_produto, nome, preco
+FROM produto
+WHERE id_produto = 1;
 ```
 
 **O que o ROLLBACK fez?**
 
-> Escreva aqui.
+Desfez a alteração não confirmada e restaurou o preço anterior ao início da transação.
 
----
+## 9. Comparação COMMIT x ROLLBACK
 
-# 9. Comparação COMMIT x ROLLBACK
+### COMMIT
 
-## COMMIT
+Confirma as alterações realizadas na transação.
 
-> Explique com suas palavras.
+### ROLLBACK
 
-## ROLLBACK
+Desfaz as alterações ainda não confirmadas na transação.
 
-> Explique com suas palavras.
+### Por que transações são importantes?
 
-## Por que transações são importantes?
+Elas ajudam a manter a consistência dos dados, permitindo confirmar operações concluídas corretamente ou desfazer alterações quando ocorre algum problema.
 
-> Escreva aqui.
+## 10. Integração do Module-2
 
----
+O arquivo `SPRINT5-5.sql` reúne:
 
-# 10. Integração do Module-2
+1. Consultas com `JOIN`.
+2. Subconsulta para comparar preços com a média.
+3. Consultas às Views criadas na Sprint 3.
+4. Execuções das Procedures e da Function da Sprint 4.
+5. Criação e teste do Trigger.
+6. Demonstração de `COMMIT` e `ROLLBACK`.
+7. Consultas finais para validar os registros.
 
-O `SPRINT5-5.sql` deverá integrar os principais conteúdos do módulo.
+As rotinas anteriores devem estar criadas no banco antes de executar as consultas de integração.
 
-Estrutura esperada:
+## 11. Consulta relacional final
 
-```text
-1. USE banco
-2. consultas com JOIN
-3. subconsultas
-4. Views
-5. Procedures
-6. Function
-7. Trigger
-8. teste de COMMIT
-9. teste de ROLLBACK
-10. consultas de validação
-```
-
-> Não é necessário duplicar todo o código do `Module-1`. O objetivo deste arquivo é integrar o que foi desenvolvido no `Module-2` utilizando o banco já existente.
-
----
-
-# 11. Consulta relacional final
-
-**Pergunta:**
-
-> Escreva aqui.
+**Pergunta:** quais vendas foram realizadas, quais clientes fizeram as compras e quais funcionários foram responsáveis?
 
 ```sql
--- Cole aqui.
+SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    f.nome AS funcionario,
+    v.data_venda,
+    v.status
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN funcionario AS f
+    ON f.id_funcionario = v.id_funcionario;
 ```
 
-**Explique:**
+**Explicação:** a consulta utiliza `INNER JOIN` para relacionar vendas, clientes e funcionários, mostrando as informações em um único resultado.
 
-> Escreva aqui.
+## 12. Subconsulta final
 
----
-
-# 12. Subconsulta final
-
-**Pergunta:**
-
-> Escreva aqui.
+**Pergunta:** quais produtos possuem preço acima da média dos produtos cadastrados?
 
 ```sql
--- Cole aqui.
+SELECT id_produto, nome, preco
+FROM produto
+WHERE preco > (
+    SELECT AVG(preco)
+    FROM produto
+);
 ```
 
-**Explique:**
+**Explicação:** a subconsulta calcula a média dos preços. A consulta principal retorna somente os produtos que possuem preço maior que essa média.
 
-> Escreva aqui.
+## 13. VIEW final mais útil
 
----
-
-# 13. VIEW final mais útil
-
-**Nome:**
-
-```text
-
-```
+**Nome:** `vw_vendas_resumo`
 
 **Por que é importante?**
 
-> Escreva aqui.
+Ela reúne informações das vendas e calcula a quantidade de itens e o valor total, facilitando consultas sem precisar escrever toda a lógica novamente.
 
----
+## 14. Procedure final mais útil
 
-# 14. Procedure final mais útil
+**Nome:** `sp_listar_vendas_cliente`
 
-**Nome:**
+**Entrada:** identificador do cliente (`p_id_cliente`).
 
-```text
+**Resultado:** lista as vendas do cliente informado, com data, status e funcionário responsável.
 
-```
+## 15. Function final
 
-**Entrada:**
-
-```text
-
-```
-
-**Resultado:**
-
-> Escreva aqui.
-
----
-
-# 15. Function final
-
-**Nome:**
-
-```text
-
-```
+**Nome:** `fn_total_venda`
 
 **O que retorna?**
 
-> Escreva aqui.
+Retorna o valor total dos itens de uma venda, calculado pela multiplicação da quantidade pelo preço unitário de cada item.
 
----
+## 16. Trigger final
 
-# 16. Trigger final
+**Nome:** `trg_validar_preco_produto`
 
-**Nome:**
+**Regra automatizada:** impede a atualização de um produto quando o novo preço é zero ou negativo.
 
-```text
+## 17. Teste operacional final
 
-```
-
-**Regra automatizada:**
-
-> Escreva aqui.
-
----
-
-# 17. Teste operacional final
-
-O aluno deverá executar o projeto no MySQL Workbench e verificar:
-
-- [ ] JOINs funcionam;
-- [ ] subconsultas funcionam;
-- [ ] Views funcionam;
-- [ ] Procedures funcionam;
-- [ ] Function funciona;
-- [ ] Trigger funciona;
-- [ ] COMMIT funciona;
+- [ ] JOINs funcionam.
+- [ ] Subconsultas funcionam.
+- [ ] Views funcionam.
+- [ ] Procedures funcionam.
+- [ ] Function funciona.
+- [ ] Trigger funciona.
+- [ ] COMMIT funciona.
 - [ ] ROLLBACK funciona.
 
----
+## 18. Validação prática/oral
 
-# 18. Validação prática/oral
+A consulta escolhida para explicação é a consulta relacional final, que utiliza `JOIN` para relacionar três tabelas.
 
-O código do aluno poderá ser selecionado pelo professor para:
+Também é possível demonstrar a alteração de um parâmetro de Procedure, explicar a View `vw_vendas_resumo`, testar o Trigger com um preço inválido e demonstrar o funcionamento das transações.
 
-```text
-EXECUTAR
-EXPLICAR
-ALTERAR
-TESTAR
-CORRIGIR
-```
+## 19. Problemas encontrados
 
-O aluno deverá ser capaz de:
-
-1. explicar uma consulta escolhida pelo professor;
-2. alterar um filtro;
-3. trocar um parâmetro de uma Procedure;
-4. explicar uma View;
-5. executar o Trigger;
-6. demonstrar `COMMIT` ou `ROLLBACK`;
-7. interpretar mensagens de erro.
-
----
-
-# 19. Problemas encontrados
-
-| Problema | Causa | Solução |
+| Problema possível | Causa | Solução |
 |---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
+| Erro ao criar o Trigger | Sintaxe ou delimitador incorreto | Conferir o bloco `DELIMITER` |
+| Rotina não encontrada | Sprint anterior não executada | Criar as rotinas anteriores antes da integração |
+| ROLLBACK não desfaz a alteração | Tabela sem suporte transacional | Verificar se utiliza InnoDB |
+| Produto não encontrado | ID usado no teste não existe | Selecionar um ID cadastrado |
 
----
-
-# 20. Autoavaliação
+## 20. Autoavaliação
 
 **Conteúdo que compreendi melhor:**
 
-> Escreva aqui.
+Compreendi melhor como relacionar tabelas usando `JOIN` e reutilizar consultas com Views e Procedures.
 
 **Conteúdo mais difícil:**
 
-> Escreva aqui.
+A parte mais difícil foi compreender o funcionamento dos Triggers e das transações.
 
 **Código do Module-2 que considero mais importante:**
 
-> Escreva aqui.
+Considero importante a Function que calcula o total de uma venda, pois ela permite reutilizar o cálculo em diferentes consultas.
 
 **O que eu conseguiria explicar presencialmente sem consultar material?**
 
-> Escreva aqui.
+Consigo explicar a diferença entre `COMMIT` e `ROLLBACK`, o funcionamento de um `JOIN` e a finalidade de uma Procedure.
 
----
+*Revise essas respostas para que representem o que você realmente compreendeu.*
 
-# 21. Estrutura recomendada do SPRINT5-5.sql
+## 21. Estrutura do arquivo SQL
 
-```sql
--- MODULE 2 — SPRINT 5/5
--- INTEGRAÇÃO FINAL
+O arquivo `SPRINT5-5.sql` contém as consultas de integração, a criação do Trigger, os testes de transação e as consultas finais de validação.
 
--- Aluno:
--- Banco:
-
-USE nome_do_banco;
-
--- JOINS
-
--- SUBCONSULTAS
-
--- VIEWS
-
--- PROCEDURES E FUNCTIONS
-
--- TRIGGER
-
--- TRANSAÇÃO COM COMMIT
-
--- TRANSAÇÃO COM ROLLBACK
-
--- VALIDAÇÃO FINAL
-```
-
----
-
-# 22. Arquivos esperados no Module-2
-
-Ao final:
+## 22. Arquivos esperados no Module-2
 
 ```text
 Module-2/
@@ -469,83 +315,48 @@ Module-2/
 └── SPRINT5-5.sql
 ```
 
-Total esperado:
+Total esperado: **10 arquivos**.
 
-```text
-10 arquivos
-```
+## 23. Checklist final
 
----
+- [ ] Mantive os arquivos do Module-1.
+- [ ] Utilizei a mesma branch `team-XX`.
+- [ ] Concluí as cinco Sprints do Module-2.
+- [ ] Revisei os arquivos `.md` e `.sql`.
+- [ ] Executei e validei as consultas.
+- [ ] Testei o Trigger.
+- [ ] Demonstrei COMMIT e ROLLBACK.
+- [ ] Conferi os nomes dos arquivos e suas pastas.
+- [ ] Estou preparado para explicar o código entregue.
 
-# 23. Checklist final
-
-- [ ] mantive os arquivos do Module-1;
-- [ ] utilizei a mesma branch `team-XX`;
-- [ ] concluí as cinco Sprints do Module-2;
-- [ ] todos os `.md` estão preenchidos;
-- [ ] todos os `.sql` foram testados;
-- [ ] JOINs funcionam;
-- [ ] subconsultas funcionam;
-- [ ] Views funcionam;
-- [ ] Procedures funcionam;
-- [ ] Function funciona;
-- [ ] Trigger funciona;
-- [ ] COMMIT e ROLLBACK foram demonstrados;
-- [ ] compreendo o código entregue;
-- [ ] revisei os nomes dos arquivos;
-- [ ] nenhum arquivo foi colocado fora de `Module-2`.
-
----
-
-# 24. Commit da Sprint 5/5
-
-Mensagem sugerida:
+## 24. Commit da Sprint 5/5
 
 ```text
 Conclui Module 2 Sprint 5 de 5 - triggers e transacoes
 ```
 
----
+## 25. Pull Request final do Module-2
 
-# 25. Pull Request final do Module-2
+**Origem:** `team-XX`  
+**Destino:** `main`
 
-Depois da Sprint 5/5, abra o Pull Request.
-
-Origem:
-
-```text
-team-XX
-```
-
-Destino:
+Título para UFR:
 
 ```text
-main
+[N2][UFR][Team XX] Sprints 1-5 - db_mercado
 ```
 
-Título — UNEMAT:
+Substituir `XX` pelo número real da equipe, conforme o repositório.
 
-```text
-[N2][UNEMAT][Team XX] Sprints 1-5 - Nome do Banco
-```
-
-Título — UFR:
-
-```text
-[N2][UFR][Team XX] Sprints 1-5 - Nome do Banco
-```
-
----
-
-# 26. Descrição sugerida do Pull Request
+## 26. Descrição sugerida do Pull Request
 
 ```text
 ## Identificação
 
-Aluno: NOME COMPLETO
-Instituição: UNEMAT ou UFR
+Aluno: Matheus Bessa Machado
+Instituição: UFR
 Branch: team-XX
-Banco: NOME DO BANCO
+Banco: db_mercado
 Módulo: 2
 
 ## Arquivos entregues
@@ -563,44 +374,22 @@ Módulo: 2
 
 ## Validação
 
-- [x] JOINs testados
-- [x] Subconsultas testadas
-- [x] Views testadas
-- [x] Procedures testadas
-- [x] Function testada
-- [x] Trigger testado
-- [x] COMMIT testado
-- [x] ROLLBACK testado
+- [ ] JOINs testados
+- [ ] Subconsultas testadas
+- [ ] Views testadas
+- [ ] Procedures testadas
+- [ ] Function testada
+- [ ] Trigger testado
+- [ ] COMMIT testado
+- [ ] ROLLBACK testado
 ```
 
----
+## 27. Uso de LLMs
 
-# 27. Uso de LLMs
+A inteligência artificial foi utilizada como apoio para estruturar e compreender o código. Todas as rotinas devem ser adaptadas ao esquema real, executadas e testadas no MySQL Workbench.
 
-LLMs podem ser utilizadas como ferramenta de apoio.
+**Fluxo:** Compreender → Adaptar → Executar → Testar → Validar.
 
-Todo código deverá ser:
+## Critério de conclusão do Module-2
 
-```text
-COMPREENDIDO
-→ ADAPTADO
-→ EXECUTADO
-→ TESTADO
-→ VALIDADO
-```
-
-O aluno poderá ser chamado presencialmente para demonstrar qualquer parte entregue.
-
----
-
-# Critério de conclusão do Module-2
-
-O Module-2 será considerado concluído quando o aluno:
-
-1. entregar as cinco Sprints;
-2. possuir os 10 arquivos exigidos;
-3. demonstrar evolução em relação ao Module-1;
-4. executar os scripts no MySQL Workbench;
-5. compreender o código entregue;
-6. abrir o Pull Request final;
-7. corrigir eventuais falhas apontadas pela validação automática.
+O módulo será considerado concluído após a entrega das cinco Sprints, a validação dos dez arquivos, a execução dos testes e a abertura do Pull Request final.
