@@ -1,440 +1,310 @@
-# SPRINT 3/5 — Views e Abstração de Consultas
+# SPRINT 3/5: Views e Abstração de Consultas
 
 **Disciplina:** Laboratório de Banco de Dados  
 **Módulo:** 2  
-**Modalidade:** Atividade individual  
-**Entrega desta Sprint:** `SPRINT3-5.md` + `SPRINT3-5.sql`
+**Aluno:** Matheus Bessa Machado  
+**Banco:** `db_mercado`  
+**SGBD:** MySQL
 
----
+## 1. Identificação
 
-# Objetivo da Sprint 3/5
+Foi utilizado o banco `db_mercado`, desenvolvido no Módulo 1. O projeto representa um mercado e possui cinco tabelas principais: `cliente`, `funcionario`, `produto`, `venda` e `item_venda`.
 
-Nesta etapa, cada aluno deverá criar **Views** para representar consultas relevantes e reutilizáveis do seu banco.
-
-Serão trabalhados:
-
-```sql
-CREATE VIEW
-CREATE OR REPLACE VIEW
-SELECT
-DROP VIEW
-SHOW FULL TABLES
-```
-
-O aluno deverá compreender que uma `VIEW` representa uma consulta armazenada que pode ser utilizada como uma tabela virtual.
-
----
-
-# 1. Identificação
-
-**Nome completo:**
-
-> Escreva aqui.
-
-**Banco utilizado:**
-
-```text
-
-```
-
----
-
-# 2. Consultas do projeto que merecem reutilização
-
-Identifique pelo menos três consultas das Sprints anteriores que são importantes para o sistema.
+## 2. Consultas do projeto que merecem reutilização
 
 | Consulta | Por que é útil? | Será transformada em VIEW? |
 |---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
-|  |  |  |
+| Vendas detalhadas | Mostra clientes e funcionários de cada venda | Sim |
+| Resumo das vendas | Calcula a quantidade de itens e o total de cada venda | Sim |
+| Vendas abertas | Ajuda a identificar vendas que ainda não foram finalizadas | Sim |
+| Produtos vendidos | Mostra os produtos presentes nos itens de venda | Sim |
 
----
+## 3. Criando uma VIEW
 
-# 3. Criando uma VIEW
+Uma `VIEW` é uma consulta SQL armazenada que pode ser utilizada como uma tabela virtual. Ela facilita a reutilização de consultas e organiza o acesso às informações.
 
-Estrutura geral:
+## 4. VIEW 1: Relacionamento entre tabelas
 
-```sql
-CREATE VIEW nome_view AS
-SELECT ...
-FROM ...
-WHERE ...;
-```
+**Nome da VIEW:** `vw_vendas_detalhadas`
 
-Exemplo:
-
-```sql
-CREATE VIEW vw_clientes_pedidos AS
-SELECT
-    c.id_cliente,
-    c.nome,
-    p.id_pedido,
-    p.data_pedido
-FROM cliente AS c
-INNER JOIN pedido AS p
-    ON c.id_cliente = p.id_cliente;
-```
-
----
-
-# 4. VIEW 1 — relacionamento entre tabelas
-
-**Nome da VIEW:**
-
-```text
-
-```
-
-**Pergunta que ela representa:**
-
-> Escreva aqui.
+**Pergunta:** Quais vendas foram realizadas, por quais clientes e funcionários?
 
 **SQL:**
 
 ```sql
--- Cole aqui.
+CREATE VIEW vw_vendas_detalhadas AS
+SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    f.nome AS funcionario,
+    v.data_venda,
+    v.status
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN funcionario AS f
+    ON f.id_funcionario = v.id_funcionario;
 ```
 
-**Tabelas utilizadas:**
-
-> Escreva aqui.
+**Tabelas utilizadas:** `venda`, `cliente` e `funcionario`.
 
 **Como consultar essa VIEW?**
 
 ```sql
--- Cole aqui.
+SELECT *
+FROM vw_vendas_detalhadas;
 ```
 
----
+A View reúne informações de três tabelas em uma consulta reutilizável.
 
-# 5. VIEW 2 — agregação ou resumo
+## 5. VIEW 2: Agregação ou resumo
 
-Esta VIEW deverá possuir, quando aplicável:
-
-- relacionamento entre tabelas;
-- `COUNT`, `SUM`, `AVG`, `MIN` ou `MAX`;
-- `GROUP BY`.
-
-**Pergunta:**
-
-> Escreva aqui.
+**Pergunta:** Qual é o total de cada venda e quantos itens foram registrados nela?
 
 ```sql
--- Cole aqui.
+CREATE VIEW vw_vendas_resumo AS
+SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    COUNT(iv.id_item_venda) AS quantidade_itens,
+    COALESCE(
+        ROUND(SUM(iv.quantidade * iv.preco_unitario), 2),
+        0
+    ) AS total_venda
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+LEFT JOIN item_venda AS iv
+    ON iv.id_venda = v.id_venda
+GROUP BY v.id_venda, c.nome;
 ```
 
-**Explique:**
+**Explicação:** A View relaciona vendas, clientes e itens. O `COUNT` conta os itens registrados, enquanto o `SUM` calcula o valor total. O `GROUP BY` agrupa os resultados por venda e cliente. O `COALESCE` retorna zero quando a venda não possui itens.
 
-> Escreva aqui.
+## 6. VIEW 3: Consulta operacional
 
----
+**Nome da VIEW:** `vw_vendas_abertas`
 
-# 6. VIEW 3 — consulta operacional do sistema
-
-Crie uma VIEW que represente uma informação útil para um usuário real.
-
-Exemplos:
-
-```text
-estoque baixo
-empréstimos em aberto
-pedidos pendentes
-alunos matriculados
-consultas futuras
-reservas ativas
-pagamentos pendentes
-```
-
-**Nome da VIEW:**
-
-```text
-
-```
+**Pergunta:** Quais vendas ainda estão abertas?
 
 ```sql
--- Cole aqui.
+CREATE VIEW vw_vendas_abertas AS
+SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    f.nome AS funcionario,
+    v.data_venda,
+    v.status
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN funcionario AS f
+    ON f.id_funcionario = v.id_funcionario
+WHERE v.status = 'aberta';
 ```
 
 **Por que essa VIEW é útil?**
 
-> Escreva aqui.
+Ela permite consultar rapidamente as vendas que ainda não foram finalizadas, facilitando o acompanhamento das operações do mercado.
 
----
-
-# 7. Consultando uma VIEW
-
-Execute:
-
-```sql
-SELECT *
-FROM nome_view;
-```
-
-Depois faça um filtro:
-
-```sql
-SELECT *
-FROM nome_view
-WHERE ...;
-```
+## 7. Consultando uma VIEW
 
 **SQL executado:**
 
 ```sql
--- Cole aqui.
+SELECT *
+FROM vw_vendas_resumo;
+
+SELECT *
+FROM vw_vendas_resumo
+WHERE total_venda > 20.00;
 ```
 
-**Resultado observado:**
+**Resultado observado:** A primeira consulta apresenta o resumo das vendas. A segunda mostra apenas as vendas cujo total é superior a R$ 20,00. A quantidade de registros depende dos dados existentes no banco.
 
-> Escreva aqui.
+## 8. CREATE OR REPLACE VIEW
 
----
-
-# 8. CREATE OR REPLACE VIEW
-
-Escolha uma VIEW e faça uma alteração coerente.
-
-Pode ser:
-
-- adicionar coluna;
-- alterar filtro;
-- incluir um `JOIN`;
-- adicionar cálculo;
-- alterar uma agregação.
-
-**VIEW original:**
-
-```sql
--- Cole aqui.
-```
+**VIEW original:** `vw_vendas_resumo`, que apresenta o identificador da venda, o cliente, a quantidade de itens e o total.
 
 **Nova versão:**
 
 ```sql
-CREATE OR REPLACE VIEW ...
+CREATE OR REPLACE VIEW vw_vendas_resumo AS
+SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    v.status,
+    COUNT(iv.id_item_venda) AS quantidade_itens,
+    COALESCE(
+        ROUND(SUM(iv.quantidade * iv.preco_unitario), 2),
+        0
+    ) AS total_venda
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+LEFT JOIN item_venda AS iv
+    ON iv.id_venda = v.id_venda
+GROUP BY v.id_venda, c.nome, v.status;
 ```
 
 **O que mudou?**
 
-> Escreva aqui.
+Foi adicionada a coluna `status`, que informa se a venda está aberta, finalizada ou cancelada. O `CREATE OR REPLACE VIEW` atualiza a definição da View existente.
 
----
-
-# 9. DROP VIEW — exercício controlado
-
-Crie uma VIEW temporária:
-
-```sql
-CREATE VIEW vw_teste AS
-SELECT ...;
-```
-
-Depois remova:
-
-```sql
-DROP VIEW vw_teste;
-```
+## 9. DROP VIEW: Exercício controlado
 
 **Código utilizado:**
 
 ```sql
--- Cole aqui.
+CREATE VIEW vw_teste AS
+SELECT id_produto, nome, preco
+FROM produto
+WHERE preco > 10.00;
+
+SELECT *
+FROM vw_teste;
+
+DROP VIEW vw_teste;
 ```
 
-**Qual a diferença entre `DROP VIEW` e `DROP TABLE`?**
+**Diferença entre DROP VIEW e DROP TABLE:**
 
-> Escreva aqui.
+O `DROP VIEW` remove uma consulta virtual armazenada. O `DROP TABLE` remove uma tabela e sua estrutura, incluindo os dados armazenados nela.
 
----
+## 10. Validando as Views
 
-# 10. Validando as Views
-
-Use:
+**Comando utilizado:**
 
 ```sql
 SHOW FULL TABLES
 WHERE Table_type = 'VIEW';
 ```
 
-**Views encontradas:**
+**Views esperadas após a execução completa:**
 
-1. 
-2. 
-3. 
+1. `vw_vendas_detalhadas`
+2. `vw_vendas_resumo`
+3. `vw_vendas_abertas`
+4. `vw_produtos_vendidos`
 
----
+A lista deve ser conferida após executar o script no MySQL Workbench.
 
-# 11. Teste de atualização dos dados-base
+## 11. Teste de atualização dos dados-base
 
-Faça um teste:
-
-1. consulte a VIEW;
-2. altere ou insira um dado em uma tabela base;
-3. consulte a VIEW novamente.
-
-**VIEW testada:**
-
-```text
-
-```
+**VIEW testada:** `vw_produtos_vendidos`.
 
 **Alteração realizada:**
 
 ```sql
--- Cole aqui.
+UPDATE produto
+SET preco = preco + 1.00
+WHERE id_produto = 1;
 ```
 
-**Resultado observado:**
-
-> Escreva aqui.
-
----
-
-# 12. Validação prática obrigatória
-
-Escolha uma VIEW.
+Depois, consulte novamente:
 
 ```sql
--- Cole aqui a definição.
+SELECT *
+FROM vw_produtos_vendidos;
 ```
 
-Explique:
+Para restaurar o preço original:
 
-1. de quais tabelas ela depende;
-2. qual relacionamento utiliza;
-3. quais campos apresenta;
-4. qual problema resolve;
-5. o que muda se os dados das tabelas originais forem alterados.
+```sql
+UPDATE produto
+SET preco = preco - 1.00
+WHERE id_produto = 1;
+```
 
-> Escreva aqui.
+**Resultado observado:** Como a View consulta os dados da tabela `produto`, o preço atualizado aparece na nova consulta. Após restaurar o preço, a consulta volta a apresentar o valor anterior. Esse teste pressupõe que o produto de identificador 1 existe e que o comando foi executado com sucesso.
 
----
+## 12. Validação prática obrigatória
 
-# 13. Quantidade mínima exigida
+**VIEW escolhida:** `vw_vendas_detalhadas`.
 
-O projeto deverá possuir no mínimo:
+```sql
+SELECT
+    v.id_venda,
+    c.nome AS cliente,
+    f.nome AS funcionario,
+    v.data_venda,
+    v.status
+FROM venda AS v
+INNER JOIN cliente AS c
+    ON c.id_cliente = v.id_cliente
+INNER JOIN funcionario AS f
+    ON f.id_funcionario = v.id_funcionario;
+```
+
+1. **Tabelas utilizadas:** `venda`, `cliente` e `funcionario`.
+2. **Relacionamento utilizado:** As chaves estrangeiras `venda.id_cliente` e `venda.id_funcionario` se relacionam com as chaves primárias das tabelas correspondentes.
+3. **Campos apresentados:** Identificador da venda, cliente, funcionário, data e status.
+4. **Problema resolvido:** Reúne em uma consulta informações que estão separadas em três tabelas.
+5. **Alteração dos dados:** Quando os dados das tabelas originais são alterados, a View passa a apresentar os dados atualizados nas consultas seguintes.
+
+## 13. Quantidade mínima exigida
+
+- [x] View com relacionamento entre tabelas.
+- [x] View com agregação e `GROUP BY`.
+- [x] View operacional.
+- [x] `CREATE OR REPLACE VIEW`.
+- [x] Exercício com `DROP VIEW`.
+- [x] Consultas sobre as Views.
+- [ ] Executar e conferir os resultados no MySQL Workbench.
+
+## 14. Estrutura do projeto
 
 ```text
-3 VIEWs úteis
-1 VIEW com relacionamento
-1 VIEW com agregação ou resumo
-1 CREATE OR REPLACE VIEW
-1 teste com DROP VIEW
+Module-2/
+├── SPRINT3-5.md
+└── SPRINT3-5.sql
 ```
 
----
-
-# 14. Estrutura recomendada do SPRINT3-5.sql
-
-```sql
--- MODULE 2 — SPRINT 3/5
--- VIEWS
-
--- Aluno:
--- Banco:
-
-USE nome_do_banco;
-
--- VIEW 1
-
--- VIEW 2
-
--- VIEW 3
-
--- CONSULTAS SOBRE AS VIEWS
-
--- CREATE OR REPLACE VIEW
-
--- VIEW TEMPORÁRIA
-
--- DROP VIEW
-
--- VALIDAÇÃO
-```
-
----
-
-# 15. Problemas encontrados
+## 15. Problemas encontrados
 
 | Problema | Causa | Solução |
 |---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
+| View já existe | Nome já utilizado no banco | Utilizar `CREATE OR REPLACE VIEW` ou remover a View antes de criá-la |
+| Coluna ambígua | Mais de uma tabela possui uma coluna com o mesmo nome | Utilizar os apelidos das tabelas |
+| Resultado desatualizado na tela | A consulta não foi executada novamente | Consultar a View novamente |
 
----
+## 16. Uso de LLMs
 
-# 16. Uso de LLMs
+O apoio de uma ferramenta de inteligência artificial foi utilizado para auxiliar na elaboração das consultas e explicações. O código deverá ser compreendido, adaptado quando necessário, executado e validado no MySQL Workbench.
 
-O uso de LLMs pode ocorrer como apoio, mas o aluno deverá compreender e validar todo o código.
+**Fluxo utilizado:**
 
-Fluxo obrigatório:
+COMPREENDER → ADAPTAR → EXECUTAR → TESTAR → VALIDAR
 
-```text
-COMPREENDER
-→ ADAPTAR
-→ EXECUTAR
-→ TESTAR
-→ VALIDAR
-```
+## 17. Checklist
 
----
+- [x] Utilizei o banco do projeto.
+- [x] Criei pelo menos três Views úteis.
+- [x] Uma View utiliza `JOIN`.
+- [x] Uma View utiliza agregação.
+- [x] Consultei as Views no código.
+- [x] Utilizei `CREATE OR REPLACE VIEW`.
+- [x] Pratiquei `DROP VIEW`.
+- [x] Incluí o comando de validação.
+- [x] Incluí o teste de atualização da tabela-base.
+- [ ] Executei e conferi os resultados no MySQL Workbench.
+- [ ] Salvei os arquivos na pasta `Module-2`.
 
-# 17. Checklist
+## 18. Git/GitHub
 
-- [ ] utilizei o banco do projeto;
-- [ ] criei pelo menos 3 Views;
-- [ ] pelo menos uma View usa JOIN;
-- [ ] pelo menos uma View usa agregação ou resumo;
-- [ ] consultei as Views;
-- [ ] utilizei `CREATE OR REPLACE VIEW`;
-- [ ] pratiquei `DROP VIEW`;
-- [ ] validei as Views;
-- [ ] testei mudança em tabela base;
-- [ ] compreendo de onde vêm os dados de cada View;
-- [ ] salvei `SPRINT3-5.md`;
-- [ ] salvei `SPRINT3-5.sql`.
-
----
-
-# 18. Git/GitHub
-
-Continue utilizando:
-
-```text
-team-XX
-```
-
-Arquivos:
+**Arquivos:**
 
 ```text
 Module-2/SPRINT3-5.md
 Module-2/SPRINT3-5.sql
 ```
 
-Commit sugerido:
+**Branch:** `team-XX`
+
+**Commit sugerido:**
 
 ```text
 Conclui Module 2 Sprint 3 de 5 - views
 ```
 
-**Ainda não abra o Pull Request final.**
-
----
-
-# Próxima etapa
-
-Na Sprint 4/5 serão trabalhados:
-
-```sql
-CREATE PROCEDURE
-CALL
-IN
-OUT
-CREATE FUNCTION
-RETURN
-IF
-ELSE
-```
+Não abrir o Pull Request final nesta etapa.
